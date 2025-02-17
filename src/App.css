@@ -1,0 +1,35 @@
+/* Floating chat button at the bottom right */
+.chat-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4a90e2;
+    border: none;
+    border-radius: 50%;
+    padding: 15px;
+    cursor: pointer;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    z-index: 1000;
+  }
+ 
+  /* Chat container positioning */
+  .chat-container {
+    position: fixed;
+    bottom: 80px;
+    right: 50px;
+    display: none;
+    z-index: 999;
+    animation: fadeIn 0.3s ease-out;
+  }
+ 
+  .chat-container.open {
+    display: block;
+  }
+ 
+  /* Optional fade in animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+ 

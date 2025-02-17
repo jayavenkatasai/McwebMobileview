@@ -1,53 +1,87 @@
 // VendorChatApp.jsx (Vendor side)
 import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
+import useFetch from "../Hooks/useFetch";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchVendorToken } from "../store/slices/VendorSlice";
+import { IoArrowBackOutline } from "react-icons/io5";
+import {
+  setChats,
+  setActiveChat,
+  setMessages,
+  setInput,
+  setUnreadCounts,
+} from "../store/slices/VendorSlice";
+import { apiurl, socketurl } from "../Endpoints/EndPoint";
+import './VendorChatApp.css'
 
-// Connect to the socket server.
-const socket = io("http://localhost:8002");
-const vendorId = "vendor123"; // Replace with your actual logged-in vendor ID
+const socket = io(socketurl);
+const vendorId = "68644";
 
 function VendorChatApp() {
-  const [chats, setChats] = useState([]);             // Vendor's chat list
-  const [activeChat, setActiveChat] = useState(null);   // Currently active chat
-  const [messages, setMessages] = useState([]);         // Messages in the active chat
-  const [input, setInput] = useState("");
-  const [unreadCounts, setUnreadCounts] = useState({});   // { roomId: unreadCount }
+  const { chats, unreadCounts, activeChat, input, messages } = useSelector(
+    (state) => state.vendor
+  );
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(fetchVendorToken(68644));
+  }, []);
 
-  // Use a ref to always have the current active chat inside the socket listener.
+  const {
+    data: GetchatsData,
+    loading: GetChatsLoading,
+    error: GetChatsError,
+    fetchData: GetChatsForVendor,
+  } = useFetch();
+
+  const {
+    data: chatmessageRes,
+    loading: chatMessageLoading,
+    error: chatMessageError,
+    fetchData: GetchatMessages,
+  } = useFetch();
+
+  const {
+    data: postedMessage,
+    loading: postedMessageLoading,
+    error: postedMessageError,
+    fetchData: PostchatMessages,
+  } = useFetch();
+
   const activeChatRef = useRef(activeChat);
   useEffect(() => {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  // On mount, set up dummy chats and join all rooms.
   useEffect(() => {
-    const dummyChats = [
-      { roomId: "room1", customerName: "Customer A", vendorId: vendorId },
-      { roomId: "room2", customerName: "Customer B", vendorId: vendorId },
-    ];
-    setChats(dummyChats);
-    // Join every room so the vendor receives messages (and notifications) for all chats.
-    dummyChats.forEach((chat) => {
+    if (GetChatsError) {
+      console.error(GetChatsError);
+      dispatch(setChats([]));
+    } else if (GetchatsData) {
+      dispatch(setChats(GetchatsData));
+    }
+  }, [GetchatsData, GetChatsError, dispatch]);
+
+  useEffect(() => {
+    chats.forEach((chat) => {
       socket.emit("joinRoom", { roomId: chat.roomId });
     });
   }, []);
 
-  // Register a stable socket listener.
   useEffect(() => {
     const handleMessage = (data) => {
-      // Process messages only for rooms that are in our chat list.
       if (chats.find((chat) => chat.roomId === data.roomId)) {
-        // If the chat is currently active, update the message list and reset its unread count.
-        if (activeChatRef.current && activeChatRef.current.roomId === data.roomId) {
+        if (
+          activeChatRef.current &&
+          activeChatRef.current.roomId === data.roomId
+        ) {
           setMessages((prev) => [...prev, data]);
           setUnreadCounts((prev) => ({ ...prev, [data.roomId]: 0 }));
         } else {
-          // Otherwise, increment the unread count.
           setUnreadCounts((prev) => ({
             ...prev,
             [data.roomId]: (prev[data.roomId] || 0) + 1,
           }));
-          // OPTIONAL: Trigger a toast or browser notification here.
         }
       }
     };
@@ -58,17 +92,99 @@ function VendorChatApp() {
     };
   }, [chats]);
 
-  // When a vendor selects a chat, we update the active chat (but we do not leave any room).
-  const joinChat = (chat) => {
-    setActiveChat(chat);
-    setMessages([]);
-    // Ensure we're joined to this room (this is idempotent now).
+  useEffect(() => {
+    GetChatsForVendor(
+      `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`, //
+        },
+      }
+    );
+  }, []);
+
+  //neww
+
+  // Update chats in Redux when fetched.
+  useEffect(() => {
+    if (GetChatsError) {
+      console.error(GetChatsError);
+      dispatch(setChats([]));
+    } else if (GetchatsData) {
+      dispatch(setChats(GetchatsData));
+    }
+  }, [GetchatsData, GetChatsError, dispatch]);
+
+  // Join all rooms.
+  useEffect(() => {
+    chats.forEach((chat) => {
+      // Use a consistent property name (roomId).
+      socket.emit("joinRoom", { roomId: chat.roomId });
+    });
+  }, [chats]);
+
+  // Socket listener for incoming messages.
+  useEffect(() => {
+    const handleMessage = (data) => {
+      // Check if the message belongs to one of our chats.
+      if (chats.find((chat) => chat.roomId === data.roomId)) {
+        if (
+          activeChatRef.current &&
+          activeChatRef.current.roomId === data.roomId
+        ) {
+          // Append new message to active chat.
+          dispatch(setMessages([...messages, data]));
+          dispatch(setUnreadCounts({ ...unreadCounts, [data.roomId]: 0 }));
+        } else {
+          // Increase unread count for the relevant chat.
+          dispatch(
+            setUnreadCounts({
+              ...unreadCounts,
+              [data.roomId]: (unreadCounts[data.roomId] || 0) + 1,
+            })
+          );
+        }
+      }
+    };
+
+    socket.on("chatMessage", handleMessage);
+    return () => {
+      socket.off("chatMessage", handleMessage);
+    };
+  }, [chats, messages, unreadCounts, dispatch]);
+
+  //new-----
+
+  const joinChat = async (chat) => {
+    dispatch(setActiveChat(chat));
+    dispatch(setMessages([]));
+
+    try {
+      // Ensure your API URL is correct: adding a slash between GetRoom and roomId.
+      const fetchedMessages = await GetchatMessages(
+        `${apiurl}/api/ExpoChat/GetRoom${chat.roomId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log(fetchedMessages);
+      if (fetchedMessages && fetchedMessages.length > 0) {
+        dispatch(setMessages(fetchedMessages));
+      }
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+    }
+
     socket.emit("joinRoom", { roomId: chat.roomId });
     // Reset unread count for this room.
-    setUnreadCounts((prev) => ({ ...prev, [chat.roomId]: 0 }));
+    dispatch(setUnreadCounts({ ...unreadCounts, [chat.roomId]: 0 }));
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (activeChat && input.trim() !== "") {
       const messageData = {
         roomId: activeChat.roomId,
@@ -76,42 +192,53 @@ function VendorChatApp() {
         sender: "vendor",
         message: input,
       };
+      // Emit the message via socket.
       socket.emit("chatMessage", messageData);
-      // Optionally update the UI immediately.
-      setMessages((prev) => [...prev, { ...messageData, sentAt: new Date() }]);
-      setInput("");
+      // Optimistically update the UI.
+      dispatch(
+        setMessages([...messages, { ...messageData, sentAt: new Date() }])
+      );
+      dispatch(setInput(""));
+
+      // Post the message using the custom hook.
+      try {
+        await PostchatMessages(`${apiurl}/api/ExpoChat/PostChatMessage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: {
+            message: input,
+            vendorName: activeChat.vendorName,
+            sender: "vendor",
+            room: messageData.roomId,
+            vendorId: activeChat.vendorId,
+          },
+        });
+      } catch (error) {
+        console.error("Error posting message:", error);
+      }
     }
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#eef" }}>
+    <div className="chat-app-container">
       {/* Sidebar with chat list and unread notifications */}
-      <div style={{ width: "30%", borderRight: "1px solid #ccc", padding: "10px" }}>
-        <h3>Your Chats</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
+      {!activeChat && <div className="chat-list-container">
+        <h3 className="chat-list-header">Your Chats</h3>
+        {GetChatsLoading && <p>Loading...</p>}
+        <ul className="chat-list">
           {chats.map((chat) => (
             <li
               key={chat.roomId}
               onClick={() => joinChat(chat)}
-              style={{
-                cursor: "pointer",
-                padding: "8px",
-                marginBottom: "4px",
-                background: activeChat && activeChat.roomId === chat.roomId ? "#ddd" : "transparent",
-              }}
+              className="chat-list-item"
             >
-              {chat.customerName}
+              <div className="chat-name">{chat.customerName}</div>
+
               {unreadCounts[chat.roomId] > 0 && (
-                <span
-                  style={{
-                    marginLeft: "5px",
-                    background: "red",
-                    color: "white",
-                    borderRadius: "50%",
-                    padding: "2px 6px",
-                    fontSize: "0.8rem",
-                  }}
-                >
+                <span className="unread-count">
                   {unreadCounts[chat.roomId]}
                 </span>
               )}
@@ -119,62 +246,82 @@ function VendorChatApp() {
           ))}
         </ul>
       </div>
+      }
 
       {/* Chat Window */}
-      <div style={{ width: "70%", padding: "10px", display: "flex", flexDirection: "column" }}>
-        {activeChat ? (
-          <>
-            <h3>Chat with {activeChat.customerName}</h3>
+    
+        {activeChat && (
+              <div className="chat-conversation-container">
+                <div className="conversation-header">
+                  <IoArrowBackOutline
+                    className="back-button"
+                    onClick={() => dispatch(setActiveChat(null))}
+                  />
+            <h3 className="conversation-title"> Chat with {activeChat.customerName}</h3>
+             </div>
             <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                border: "1px solid #ccc",
-                padding: "10px",
-                marginBottom: "10px",
-              }}
-            >
+             className="conversation-messages"
+          >
+             {chatMessageLoading && (
+              <p className="loading">Loading messages...</p>
+            )}
               {messages.map((msg, index) => (
                 <div
                   key={index}
-                  style={{
-                    textAlign: msg.sender === "vendor" ? "right" : "left",
-                    margin: "8px 0",
-                  }}
+                   className={`chat-message ${
+                  msg.sender === "vendor" ? "sent" : "received"
+                }`}
+                 
                 >
-                  <span
-                    style={{
-                      background: msg.sender === "vendor" ? "#cce5ff" : "#d4edda",
-                      padding: "8px",
-                      borderRadius: "5px",
-                      display: "inline-block",
-                    }}
-                  >
-                    {msg.message}
-                  </span>
-                  <br />
-                  <small>{new Date(msg.sentAt).toLocaleTimeString()}</small>
+                      <div className="message-text"> {msg.message}</div>
+                
+                <div className="message-timestamp">
+                  {(msg.createdDate && (
+                    <small>
+                      {new Intl.DateTimeFormat("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      }).format(new Date(msg.createdDate))}
+                    </small>
+                  )) || (
+                    <small>
+                      {new Intl.DateTimeFormat("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      }).format(new Date(msg.sentAt))}
+                    </small>
+                  )}
+                     </div>
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex" }}>
+            <div className="conversation-input-container">
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => dispatch(setInput(e.target.value))}
                 placeholder="Type your message..."
-                style={{ flex: 1, padding: "10px", marginRight: "10px" }}
+               className="conversation-input"
               />
-              <button onClick={sendMessage} style={{ padding: "10px" }}>
+              <button onClick={sendMessage} className="send-button">
                 Send
               </button>
-            </div>
-          </>
-        ) : (
-          <p>Please select a chat to start messaging.</p>
-        )}
+          </div>
+          </div>
+       
+        ) }
       </div>
-    </div>
+  
   );
 }
 
