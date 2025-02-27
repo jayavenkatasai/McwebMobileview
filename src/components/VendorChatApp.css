@@ -10,7 +10,18 @@
   flex-direction: column;
   overflow: hidden;
 }
-
+.refresh-button{
+  font-size: 25px;
+  color: #fff;
+  cursor: pointer;
+}
+.chat-list-header-container{
+  display: flex;
+  background-color: #4a90e2;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0px 20px;
+}
 /* Chat List (WhatsApp-like) */
 .chat-list-container {
   height: 100%;
@@ -18,12 +29,9 @@
   flex-direction: column;
 }
 
-.chat-list-container h3 {
-  margin: 0 0 15px 0;
+.chat-list-container p {
   font-size: 18px;
   color: #333;
-  background-color: #4a90e2;
-  padding: 10px;
   color: white;
 }
 

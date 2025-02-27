@@ -37,8 +37,8 @@ const vendorSlice = createSlice({
         Token: "",
         loading: false,
         error: null,
-        vendorId: "68644",
-        
+        vendorId: "",
+        purchaser: false,
         chats: [],
         activeChat: null,
         messagesByRoom: {}, // { roomId1: [...], roomId2: [...] }
@@ -63,6 +63,12 @@ const vendorSlice = createSlice({
         setUnreadCounts: (state, action) => {
             state.unreadCounts = action.payload;
         },
+        setVendorId : (state,action)=>{
+            state.vendorId = action.payload;
+        },
+        setPurchaser : (state,action)=>{
+            state.vendorId = action.payload;
+        }
 
     },
     extraReducers: (builder) => {
@@ -84,6 +90,6 @@ const vendorSlice = createSlice({
 })
 
 
-export const { setChats, setActiveChat, setMessages, setInput, setUnreadCounts } = vendorSlice.actions;
+export const { setChats,setVendorId, setActiveChat, setMessages, setInput, setUnreadCounts,setPurchaser } = vendorSlice.actions;
 export default vendorSlice.reducer;
 

@@ -5,6 +5,10 @@ import useFetch from "../Hooks/useFetch";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchVendorToken } from "../store/slices/VendorSlice";
 import { IoArrowBackOutline } from "react-icons/io5";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { MdOutlineRefresh } from "react-icons/md";
+
 import {
   setChats,
   setActiveChat,
@@ -13,18 +17,28 @@ import {
   setUnreadCounts,
 } from "../store/slices/VendorSlice";
 import { apiurl, socketurl } from "../Endpoints/EndPoint";
-import './VendorChatApp.css'
+import "./VendorChatApp.css";
+import { useMemo } from "react";
 
-const socket = io(socketurl);
-const vendorId = "68644";
+//const vendorId = "69385"; //68644
 
 function VendorChatApp() {
-  const { chats, unreadCounts, activeChat, input, messages } = useSelector(
-    (state) => state.vendor
-  );
+  const [refreshloading, setrefreshloading] = useState(false);
+  const socket = useMemo(() => io(socketurl, { autoConnect: true }), []);
+  // const socket = io(socketurl);
+  const {
+    chats,
+    unreadCounts,
+    activeChat,
+    input,
+    messages,
+    Token,
+    vendorId,
+    purchaser,
+  } = useSelector((state) => state.vendor);
   const dispatch = useDispatch();
   useEffect(() => {
-    dispatch(fetchVendorToken(68644));
+    dispatch(fetchVendorToken(vendorId));
   }, []);
 
   const {
@@ -93,16 +107,86 @@ function VendorChatApp() {
   }, [chats]);
 
   useEffect(() => {
-    GetChatsForVendor(
-      `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`, //
-        },
+    if (localStorage.getItem("token")?.length > 0) {
+      GetChatsForVendor(
+        `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, //
+          },
+        }
+      );
+    }
+  }, [Token, dispatch]);
+
+  // refresh button
+  // New: refreshChats function triggered by the refresh button.
+  const refreshChats = async () => {
+    setrefreshloading(true);
+    try {
+      const response = await fetch(
+        `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch updated chats");
       }
-    );
-  }, []);
+      setrefreshloading(false);
+      const updatedChats = await response.json();
+
+      // Identify new chat rooms that are not in the current list.
+      const currentRoomIds = new Set(chats?.map((chat) => chat.roomId));
+      const newChats = updatedChats.filter(
+        (chat) => !currentRoomIds.has(chat.roomId)
+      );
+
+      if (newChats.length > 0) {
+        toast.info("A new chat has arrived!");
+        // Only emit joinRoom for new chat rooms.
+        newChats.forEach((chat) => {
+          socket.emit("joinRoom", { roomId: chat.roomId });
+        });
+      }
+      // Update Redux with the new chat list.
+      dispatch(setChats(updatedChats));
+    } catch (error) {
+      console.error("Error refreshing vendor chat data:", error);
+    } finally {
+      setrefreshloading(false);
+    }
+  };
+  // At the top of your VendorChatApp.jsx, assume you have:
+  const isVendorPaid = false; // Replace with your actual check from Redux or an API
+
+  // Inside your VendorChatApp component, add:
+  useEffect(() => {
+    const handleCustomerDisconnect = (data) => {
+      console.log("Customer disconnected from room:", data.roomId);
+      if (!purchaser) {
+        // Filter out the chat room that the customer has disconnected from.
+        const updatedChats = chats.filter(
+          (chat) => chat.roomId !== data.roomId
+        );
+        dispatch(setChats(updatedChats));
+        toast.info(`Chat room ${data.roomId} removed (customer disconnected)`);
+      } else {
+        // For paid vendors, you might keep the room or mark it inactive in some way.
+        console.log("Vendor is paid; keeping disconnected room:", data.roomId);
+      }
+    };
+
+    socket.on("customerDisconnected", handleCustomerDisconnect);
+
+    return () => {
+      socket.off("customerDisconnected", handleCustomerDisconnect);
+    };
+  }, [chats, dispatch, purchaser]);
 
   //neww
 
@@ -153,7 +237,67 @@ function VendorChatApp() {
       socket.off("chatMessage", handleMessage);
     };
   }, [chats, messages, unreadCounts, dispatch]);
+  // New: Listen for "refreshdata" event and update the chat list.
+  // useEffect(() => {
+  //   const handleRefreshData = async (data) => {
+  //     console.log("Vendor refreshdata received:", data);
+  //     try {
+  //       // Fetch the updated chat list for the vendor
+  //       const response = await fetch(
+  //         `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchase=${purchaser}`,
+  //         {
+  //           method: "GET",
+  //           headers: {
+  //             Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //           },
+  //         }
+  //       );
+  //       if (!response.ok) {
+  //         throw new Error("Failed to fetch updated chats");
+  //       }
+  //       const updatedChats = await response.json();
 
+  //       // Identify new chat rooms that are not in the current list.
+  //       const currentRoomIds = new Set(chats?.map((chat) => chat.roomId));
+  //       const newChats = updatedChats.filter(
+  //         (chat) => !currentRoomIds.has(chat.roomId)
+  //       );
+
+  //       // If there are new chats, show a toast notification.
+  //       if (newChats.length > 0) {
+  //         toast.info("A new chat has arrived!");
+  //       }
+
+  //       // Update Redux state with the new chat list.
+  //       dispatch(setChats(updatedChats));
+
+  //       // Join only the new rooms.
+  //       newChats.forEach((chat) => {
+  //         socket.emit("joinRoom", { roomId: chat.roomId });
+  //       });
+  //     } catch (error) {
+  //       console.error("Error refreshing vendor chat data:", error);
+  //     }
+  //   };
+
+  //   socket.on("refreshdata", handleRefreshData);
+  //   return () => {
+  //     socket.off("refreshdata", handleRefreshData);
+  //   };
+  // }, [chats, vendorId, dispatch]);
+  // Also listen for refreshdata event from the socket.
+  useEffect(() => {
+    const handleRefreshData = async (data) => {
+      console.log("Vendor refreshdata received:", data);
+      // Reuse the same logic as refreshChats.
+      refreshChats();
+    };
+
+    socket.on("refreshdata", handleRefreshData);
+    return () => {
+      socket.off("refreshdata", handleRefreshData);
+    };
+  }, [socket]);
   //new-----
 
   const joinChat = async (chat) => {
@@ -225,56 +369,72 @@ function VendorChatApp() {
   return (
     <div className="chat-app-container">
       {/* Sidebar with chat list and unread notifications */}
-      {!activeChat && <div className="chat-list-container">
-        <h3 className="chat-list-header">Your Chats</h3>
-        {GetChatsLoading && <p>Loading...</p>}
-        <ul className="chat-list">
-          {chats.map((chat) => (
-            <li
-              key={chat.roomId}
-              onClick={() => joinChat(chat)}
-              className="chat-list-item"
-            >
-              <div className="chat-name">{chat.customerName}</div>
+      {!activeChat && (
+        <div className="chat-list-container">
+          <div className="chat-list-header-container">
+            <p className="chat-list-header">Your Chats</p>
+            {GetChatsLoading || refreshloading ? (
+              <p>Loading...</p>
+            ) : (
+              <MdOutlineRefresh
+                onClick={refreshChats}
+                className="refresh-button"
+              />
+            )}
 
-              {unreadCounts[chat.roomId] > 0 && (
-                <span className="unread-count">
-                  {unreadCounts[chat.roomId]}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-      }
+            {/* <button onClick={refreshChats}>Refresh</button> */}
+          </div>
+
+          {GetChatsLoading && <p>Loading...</p>}
+          {chats.length === 0 && <p>No customers are available To chat</p>}
+          <ul className="chat-list">
+            {chats.map((chat) => (
+              <li
+                key={chat.roomId}
+                onClick={() => joinChat(chat)}
+                className="chat-list-item"
+              >
+                <div className="chat-name">
+                  {chat.customerName || chat.customerId}
+                </div>
+
+                {unreadCounts[chat.roomId] > 0 && (
+                  <span className="unread-count">
+                    {unreadCounts[chat.roomId]}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Chat Window */}
-    
-        {activeChat && (
-              <div className="chat-conversation-container">
-                <div className="conversation-header">
-                  <IoArrowBackOutline
-                    className="back-button"
-                    onClick={() => dispatch(setActiveChat(null))}
-                  />
-            <h3 className="conversation-title"> Chat with {activeChat.customerName}</h3>
-             </div>
-            <div
-             className="conversation-messages"
-          >
-             {chatMessageLoading && (
+
+      {activeChat && (
+        <div className="chat-conversation-container">
+          <div className="conversation-header">
+            <IoArrowBackOutline
+              className="back-button"
+              onClick={() => dispatch(setActiveChat(null))}
+            />
+            <h3 className="conversation-title">
+              Chat with {activeChat.customerName || activeChat.customerId}
+            </h3>
+          </div>
+          <div className="conversation-messages">
+            {chatMessageLoading && (
               <p className="loading">Loading messages...</p>
             )}
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                   className={`chat-message ${
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`chat-message ${
                   msg.sender === "vendor" ? "sent" : "received"
                 }`}
-                 
-                >
-                      <div className="message-text"> {msg.message}</div>
-                
+              >
+                <div className="message-text"> {msg.message}</div>
+
                 <div className="message-timestamp">
                   {(msg.createdDate && (
                     <small>
@@ -301,27 +461,25 @@ function VendorChatApp() {
                       }).format(new Date(msg.sentAt))}
                     </small>
                   )}
-                     </div>
                 </div>
-              ))}
-            </div>
-            <div className="conversation-input-container">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => dispatch(setInput(e.target.value))}
-                placeholder="Type your message..."
-               className="conversation-input"
-              />
-              <button onClick={sendMessage} className="send-button">
-                Send
-              </button>
+              </div>
+            ))}
           </div>
+          <div className="conversation-input-container">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => dispatch(setInput(e.target.value))}
+              placeholder="Type your message..."
+              className="conversation-input"
+            />
+            <button onClick={sendMessage} className="send-button">
+              Send
+            </button>
           </div>
-       
-        ) }
-      </div>
-  
+        </div>
+      )}
+    </div>
   );
 }
 
