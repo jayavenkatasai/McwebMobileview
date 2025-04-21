@@ -174,6 +174,7 @@ function VendorChatApp() {
           (chat) => chat.roomId !== data.roomId
         );
         dispatch(setChats(updatedChats));
+        refreshChats();
         toast.info(`Chat room ${data.roomId} removed (customer disconnected)`);
       } else {
         // For paid vendors, you might keep the room or mark it inactive in some way.
@@ -237,55 +238,6 @@ function VendorChatApp() {
       socket.off("chatMessage", handleMessage);
     };
   }, [chats, messages, unreadCounts, dispatch]);
-  // New: Listen for "refreshdata" event and update the chat list.
-  // useEffect(() => {
-  //   const handleRefreshData = async (data) => {
-  //     console.log("Vendor refreshdata received:", data);
-  //     try {
-  //       // Fetch the updated chat list for the vendor
-  //       const response = await fetch(
-  //         `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchase=${purchaser}`,
-  //         {
-  //           method: "GET",
-  //           headers: {
-  //             Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //           },
-  //         }
-  //       );
-  //       if (!response.ok) {
-  //         throw new Error("Failed to fetch updated chats");
-  //       }
-  //       const updatedChats = await response.json();
-
-  //       // Identify new chat rooms that are not in the current list.
-  //       const currentRoomIds = new Set(chats?.map((chat) => chat.roomId));
-  //       const newChats = updatedChats.filter(
-  //         (chat) => !currentRoomIds.has(chat.roomId)
-  //       );
-
-  //       // If there are new chats, show a toast notification.
-  //       if (newChats.length > 0) {
-  //         toast.info("A new chat has arrived!");
-  //       }
-
-  //       // Update Redux state with the new chat list.
-  //       dispatch(setChats(updatedChats));
-
-  //       // Join only the new rooms.
-  //       newChats.forEach((chat) => {
-  //         socket.emit("joinRoom", { roomId: chat.roomId });
-  //       });
-  //     } catch (error) {
-  //       console.error("Error refreshing vendor chat data:", error);
-  //     }
-  //   };
-
-  //   socket.on("refreshdata", handleRefreshData);
-  //   return () => {
-  //     socket.off("refreshdata", handleRefreshData);
-  //   };
-  // }, [chats, vendorId, dispatch]);
-  // Also listen for refreshdata event from the socket.
   useEffect(() => {
     const handleRefreshData = async (data) => {
       console.log("Vendor refreshdata received:", data);
