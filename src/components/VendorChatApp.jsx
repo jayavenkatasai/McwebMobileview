@@ -109,7 +109,7 @@ function VendorChatApp() {
   useEffect(() => {
     if (localStorage.getItem("token")?.length > 0) {
       GetChatsForVendor(
-        `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+        `${apiurl}/api/McentralApis/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
         {
           method: "GET",
           headers: {
@@ -126,7 +126,7 @@ function VendorChatApp() {
     setrefreshloading(true);
     try {
       const response = await fetch(
-        `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+        `${apiurl}/api/McentralApis/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
         {
           method: "GET",
           headers: {
@@ -259,7 +259,7 @@ function VendorChatApp() {
     try {
       // Ensure your API URL is correct: adding a slash between GetRoom and roomId.
       const fetchedMessages = await GetchatMessages(
-        `${apiurl}/api/ExpoChat/GetRoom${chat.roomId}`,
+        `${apiurl}/api/McentralApis/GetRoom${chat.roomId}`,
         {
           method: "GET",
           headers: {
@@ -298,7 +298,7 @@ function VendorChatApp() {
 
       // Post the message using the custom hook.
       try {
-        await PostchatMessages(`${apiurl}/api/ExpoChat/PostChatMessage`, {
+        await PostchatMessages(`${apiurl}/api/McentralApis/PostChatMessage`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
