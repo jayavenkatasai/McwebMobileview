@@ -36,10 +36,12 @@ function VendorChatApp() {
     vendorId,
     purchaser,
   } = useSelector((state) => state.vendor);
+  const { vendor } = useSelector((state) => state);
   const dispatch = useDispatch();
   useEffect(() => {
+    console.log(vendor);
     dispatch(fetchVendorToken(vendorId));
-  }, []);
+  }, [vendorId]);
 
   const {
     data: GetchatsData,
@@ -373,6 +375,18 @@ function VendorChatApp() {
             <h3 className="conversation-title">
               Chat with {activeChat.customerName || activeChat.customerId}
             </h3>
+          </div>
+          <div>
+            <p style={{ textAlign: "center" }}>
+              Email:{" "}
+              {activeChat.customerEmail ? (
+                <a href={`mailto:${activeChat.customerEmail}`}>
+                  {activeChat.customerEmail}
+                </a>
+              ) : (
+                "No Email available"
+              )}
+            </p>
           </div>
           <div className="conversation-messages">
             {chatMessageLoading && (

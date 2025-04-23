@@ -67,7 +67,7 @@ const vendorSlice = createSlice({
       state.vendorId = action.payload;
     },
     setPurchaser: (state, action) => {
-      state.vendorId = action.payload;
+      state.purchaser = action.payload;
     },
   },
   extraReducers: (builder) => {
