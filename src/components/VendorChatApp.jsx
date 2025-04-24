@@ -77,8 +77,8 @@ function VendorChatApp() {
       dispatch(setChats(GetchatsData));
     }
   }, [GetchatsData, GetChatsError, dispatch]);
-
   useEffect(() => {
+    socket.emit("vendorjoin", { vendorId: vendorId });
     chats.forEach((chat) => {
       socket.emit("joinRoom", { roomId: chat.roomId });
     });

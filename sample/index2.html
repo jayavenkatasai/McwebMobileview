@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="chat-root"></div>
+    <script src="../dist/expo-vendor-chat.umd.js"></script>
+    <!-- <link rel="stylesheet" href="../dist/expochat.css" /> -->
+    <script>
+      // Initialize the chat plugin with options
+      ExpoVendorChat.initChat({
+        vendorId: 124,
+        purchaser: true,
+        mountId: "chat-root", // optional if different from default
+      });
+    </script>
+  </body>
+</html>
