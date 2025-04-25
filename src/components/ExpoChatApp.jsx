@@ -8,24 +8,23 @@ import { IoArrowBackOutline } from "react-icons/io5";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { MdOutlineRefresh } from "react-icons/md";
-
+import "../Loading/SpinnerLoading.css";
 import {
   setChats,
   setActiveChat,
   setMessages,
   setInput,
   setUnreadCounts,
-} from "../store/slices/VendorSlice";
+} from "../store/slices/ExpoSlice";
 import { apiurl, socketurl } from "../Endpoints/EndPoint";
 import "./VendorChatApp.css";
 import { useMemo } from "react";
-import "../Loading/SpinnerLoading.css";
 
 //const vendorId = "69385"; //68644
 
-function VendorChatApp() {
+function ExpoChatApp({ sharedSocket }) {
   const [refreshloading, setrefreshloading] = useState(false);
-  const socket = useMemo(() => io(socketurl, { autoConnect: true }), []);
+  const socket = useMemo(() => io(socketurl, { autoConnect: true }), []); //sharedSocket; //
   // const socket = io(socketurl);
   const {
     chats,
@@ -34,15 +33,19 @@ function VendorChatApp() {
     input,
     messages,
     Token,
-    vendorId,
-    purchaser,
-  } = useSelector((state) => state.vendor);
-  const { vendor } = useSelector((state) => state);
+    // vendorId,
+    // purchaser,
+  } = useSelector((state) => state.expo);
+  const { vendorId, purchaser } = useSelector((state) => state.vendor);
+  console.log(vendorId, purchaser);
   const dispatch = useDispatch();
   useEffect(() => {
-    console.log(vendor);
     dispatch(fetchVendorToken(vendorId));
-  }, [vendorId]);
+  }, []);
+  const previousRoomIdsRef = useRef(new Set());
+  useEffect(() => {
+    previousRoomIdsRef.current = new Set(chats.map((c) => c.roomId));
+  }, [chats]);
 
   const {
     data: GetchatsData,
@@ -78,6 +81,7 @@ function VendorChatApp() {
       dispatch(setChats(GetchatsData));
     }
   }, [GetchatsData, GetChatsError, dispatch]);
+
   useEffect(() => {
     socket.emit("vendorjoin", { vendorId: vendorId });
     // chats.forEach((chat) => {
@@ -112,7 +116,7 @@ function VendorChatApp() {
   useEffect(() => {
     if (localStorage.getItem("token")?.length > 0) {
       GetChatsForVendor(
-        `${apiurl}/api/McentralApis/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+        `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
         {
           method: "GET",
           headers: {
@@ -181,7 +185,7 @@ function VendorChatApp() {
       setrefreshloading(true);
       try {
         const resp = await fetch(
-          `${apiurl}/api/McentralApis/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
+          `${apiurl}/api/ExpoChat/GetRoomsById/?vendorId=${vendorId}&purchaser=${purchaser}`,
           {
             method: "GET",
             headers: {
@@ -215,7 +219,6 @@ function VendorChatApp() {
     [dispatch, purchaser, vendorId, socket]
   );
   // At the top of your VendorChatApp.jsx, assume you have:
-
   const isVendorPaid = false; // Replace with your actual check from Redux or an API
 
   // Inside your VendorChatApp component, add:
@@ -296,14 +299,14 @@ function VendorChatApp() {
     const handleRefreshData = async (data) => {
       console.log("Vendor refreshdata received:", data);
       // Reuse the same logic as refreshChats.
-      refreshChats();
+      refreshChats(false);
     };
 
     socket.on("refreshdata", handleRefreshData);
     return () => {
       socket.off("refreshdata", handleRefreshData);
     };
-  }, [socket]);
+  }, []);
   //new-----
 
   const joinChat = async (chat) => {
@@ -313,7 +316,7 @@ function VendorChatApp() {
     try {
       // Ensure your API URL is correct: adding a slash between GetRoom and roomId.
       const fetchedMessages = await GetchatMessages(
-        `${apiurl}/api/McentralApis/GetRoom${chat.roomId}`,
+        `${apiurl}/api/ExpoChat/GetRoom${chat.roomId}`,
         {
           method: "GET",
           headers: {
@@ -352,7 +355,7 @@ function VendorChatApp() {
 
       // Post the message using the custom hook.
       try {
-        await PostchatMessages(`${apiurl}/api/McentralApis/PostChatMessage`, {
+        await PostchatMessages(`${apiurl}/api/ExpoChat/PostChatMessage`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -378,12 +381,12 @@ function VendorChatApp() {
       {!activeChat && (
         <div className="chat-list-container">
           <div className="chat-list-header-container">
-            <p className="chat-list-header">Your Chats</p>
+            <p className="chat-list-header">Expo Chats</p>
             {GetChatsLoading || refreshloading ? (
               <div className="spinnerContainer">
-              <div className="spinner"></div>
-              {/* <p>Loading....</p> */}
-            </div>
+                <div className="spinner"></div>
+                {/* <p>Loading....</p> */}
+              </div>
             ) : (
               <MdOutlineRefresh
                 onClick={refreshChats}
@@ -493,6 +496,12 @@ function VendorChatApp() {
               onChange={(e) => dispatch(setInput(e.target.value))}
               placeholder="Type your message..."
               className="conversation-input"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
             />
             <button onClick={sendMessage} className="send-button">
               Send
@@ -504,4 +513,4 @@ function VendorChatApp() {
   );
 }
 
-export default VendorChatApp;
+export default ExpoChatApp;
