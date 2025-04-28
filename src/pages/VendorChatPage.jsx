@@ -64,7 +64,7 @@ export default function VendorChatPage() {
   }, [vendorId, purchaser, dispatch]);
 
   return (
-    <div style={{width:"100%",height:"100vh"}}>
+    <div style={{ width: "100%", height: "100vh" }}>
       <div
         className="tab-switcher"
         style={{ position: "relative", left: "370px", top: "39px" }}
