@@ -67,19 +67,41 @@ export default function VendorChatPage() {
     <div style={{ width: "100%", height: "100vh" }}>
       <div
         className="tab-switcher"
-        style={{ position: "relative", left: "370px", top: "39px" }}
       >
-        {ispaid && (
-          <button
-            className="tab-switcher-button"
-            onClick={() =>
-              setActiveTab(activeTab === "expo" ? "vendor" : "expo")
-            }
-          >
-            {activeTab == "vendor" ? "Expo Chats" : "Customer Chats"}
-          </button>
-        )}
-      </div>
+        {
+          <div style={{
+            display: "flex",
+            gap: "14px",
+            paddingLeft: "10px",
+            backgroundColor: "#F67311",
+          }}>
+            <button
+              
+              className={
+                activeTab === "vendor"
+                  ? "tab-switcher-button"
+                  : "tab-switcher-button-disable"
+              }
+              onClick={() => setActiveTab("vendor")}
+            >
+              Customer Chats
+            </button>
+            <button
+              className={
+                activeTab === "expo"
+                  ? "tab-switcher-button"
+                  : "tab-switcher-button-disable"
+              }
+              // disabled={activeTab === "vendor"}
+              onClick={() => setActiveTab("expo")}
+            >
+              Expo Chats
+            </button>
+        
+          </div>
+        }
+          </div>
+
 
       <div className="fullpage-chat">
         {activeTab === "vendor" ? <VendorChatApp /> : <ExpoChatApp />}

@@ -3,7 +3,7 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: #4a90e2;
+    background: #F67311;
     border: none;
     border-radius: 50%;
     padding: 15px;
@@ -12,7 +12,40 @@
     color: #fff;
     z-index: 1000;
   }
- 
+ .tab-switcher-button {
+  /* background: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 5px; */
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  font-size: 14px;
+  border: none;
+  background-color: #fff;
+  color: #f67311;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+.tab-switcher-button-disable {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  font-size: 14px;
+  border: none;
+  background-color: #f67311;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-size: 14px;
+}
+ .chat-list-header-container {
+  position: absolute;
+  right: 0px;
+  top: 0;
+}
   /* Chat container positioning */
   .chat-container {
     position: fixed;
@@ -32,7 +65,7 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
- 
+
   /* ensure root and html fill the viewport */
 html, body, #root {
   height: 100%;

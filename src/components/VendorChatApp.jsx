@@ -23,7 +23,7 @@ import "../Loading/SpinnerLoading.css";
 
 //const vendorId = "69385"; //68644
 
-function VendorChatApp() {
+function VendorChatApp({ sharedSocket }) {
   const [refreshloading, setrefreshloading] = useState(false);
   const socket = useMemo(() => io(socketurl, { autoConnect: true }), []);
   // const socket = io(socketurl);
@@ -37,12 +37,16 @@ function VendorChatApp() {
     vendorId,
     purchaser,
   } = useSelector((state) => state.vendor);
-  const { vendor } = useSelector((state) => state);
+  // const { vendor } = useSelector((state) => state);
   const dispatch = useDispatch();
   useEffect(() => {
-    console.log(vendor);
+    // console.log(vendor);
     dispatch(fetchVendorToken(vendorId));
-  }, [vendorId]);
+  }, []);
+  const previousRoomIdsRef = useRef(new Set());
+  useEffect(() => {
+    previousRoomIdsRef.current = new Set(chats.map((c) => c.roomId));
+  }, [chats]);
 
   const {
     data: GetchatsData,
@@ -296,14 +300,14 @@ function VendorChatApp() {
     const handleRefreshData = async (data) => {
       console.log("Vendor refreshdata received:", data);
       // Reuse the same logic as refreshChats.
-      refreshChats();
+      refreshChats(false);
     };
 
     socket.on("refreshdata", handleRefreshData);
     return () => {
       socket.off("refreshdata", handleRefreshData);
     };
-  }, [socket]);
+  }, []);
   //new-----
 
   const joinChat = async (chat) => {
@@ -378,12 +382,12 @@ function VendorChatApp() {
       {!activeChat && (
         <div className="chat-list-container">
           <div className="chat-list-header-container">
-            <p className="chat-list-header">Your Chats</p>
-            {GetChatsLoading || refreshloading ? (
+            {/* <p className="chat-list-header">Your Chats</p> */}
+            {GetChatsLoading ? (
               <div className="spinnerContainer">
-              <div className="spinner"></div>
-              {/* <p>Loading....</p> */}
-            </div>
+                <div className="spinner"></div>
+                {/* <p>Loading....</p> */}
+              </div>
             ) : (
               <MdOutlineRefresh
                 onClick={refreshChats}
@@ -394,8 +398,26 @@ function VendorChatApp() {
             {/* <button onClick={refreshChats}>Refresh</button> */}
           </div>
 
-          {GetChatsLoading && <p>Loading...</p>}
-          {chats.length === 0 && <p>No customers are available To chat</p>}
+          {GetChatsLoading ||
+            (refreshloading && (
+              <div className="spinnerContainer">
+                <div className="spinner"></div>
+                {/* <p>Loading....</p> */}
+              </div>
+            ))}
+          {chats.length === 0 && (
+            <p
+              style={{
+                color: "#000",
+                margin: "0px",
+                padding: "5px",
+                fontSize: "18px",
+                fontWeight: "500",
+              }}
+            >
+              No customers are available to chat
+            </p>
+          )}
           <ul className="chat-list">
             {chats.map((chat) => (
               <li
@@ -428,11 +450,11 @@ function VendorChatApp() {
               onClick={() => dispatch(setActiveChat(null))}
             />
             <h3 className="conversation-title">
-              Chat with {activeChat.customerName || activeChat.customerId}
+              {activeChat.customerName || activeChat.customerId}
             </h3>
           </div>
           <div>
-            <p style={{ textAlign: "center" }}>
+            <p style={{ textAlign: "left", paddingLeft: "20px" }}>
               Email:{" "}
               {activeChat.customerEmail ? (
                 <a href={`mailto:${activeChat.customerEmail}`}>
@@ -493,6 +515,12 @@ function VendorChatApp() {
               onChange={(e) => dispatch(setInput(e.target.value))}
               placeholder="Type your message..."
               className="conversation-input"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
             />
             <button onClick={sendMessage} className="send-button">
               Send

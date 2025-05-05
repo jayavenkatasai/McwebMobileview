@@ -381,7 +381,7 @@ function ExpoChatApp({ sharedSocket }) {
       {!activeChat && (
         <div className="chat-list-container">
           <div className="chat-list-header-container">
-            <p className="chat-list-header">Expo Chats</p>
+            {/* <p className="chat-list-header"></p> */}
             {GetChatsLoading || refreshloading ? (
               <div className="spinnerContainer">
                 <div className="spinner"></div>
@@ -396,9 +396,26 @@ function ExpoChatApp({ sharedSocket }) {
 
             {/* <button onClick={refreshChats}>Refresh</button> */}
           </div>
-
-          {GetChatsLoading && <p>Loading...</p>}
-          {chats.length === 0 && <p>No customers are available To chat</p>}
+          {GetChatsLoading || refreshloading ? (
+            <div className="spinnerContainer">
+              <div className="spinner"></div>
+              {/* <p>Loading....</p> */}
+            </div>
+          ) : (
+            chats.length === 0 && (
+              <p
+                style={{
+                  color: "#000",
+                  margin: "0px",
+                  padding: "5px",
+                  fontSize: "18px",
+                  fontWeight: "500",
+                }}
+              >
+                No customers are available to chat
+              </p>
+            )
+          )}
           <ul className="chat-list">
             {chats.map((chat) => (
               <li
@@ -431,11 +448,11 @@ function ExpoChatApp({ sharedSocket }) {
               onClick={() => dispatch(setActiveChat(null))}
             />
             <h3 className="conversation-title">
-              Chat with {activeChat.customerName || activeChat.customerId}
+              {activeChat.customerName || activeChat.customerId}
             </h3>
           </div>
           <div>
-            <p style={{ textAlign: "center" }}>
+            <p style={{ textAlign: "left", paddingLeft: "20px" }}>
               Email:{" "}
               {activeChat.customerEmail ? (
                 <a href={`mailto:${activeChat.customerEmail}`}>

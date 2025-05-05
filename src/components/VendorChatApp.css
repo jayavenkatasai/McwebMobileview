@@ -10,17 +10,25 @@
   flex-direction: column;
   overflow: hidden;
 }
-.refresh-button{
+.refresh-button {
   font-size: 25px;
   color: #fff;
   cursor: pointer;
-}
-.chat-list-header-container{
+  border: none;
+  background: none;
+  z-index: 999;
   display: flex;
-  background-color: #4a90e2;
+}
+.chat-list-header-container {
+  display: flex;
+  background-color: #f67311;
   justify-content: space-between;
   align-items: center;
-  padding: 0px 20px;
+  padding: 10px 20px;
+}
+.chat-list-header {
+  font-size: 18px;
+  color: #fff;
 }
 /* Chat List (WhatsApp-like) */
 .chat-list-container {
@@ -29,11 +37,11 @@
   flex-direction: column;
 }
 
-.chat-list-container p {
+/* .chat-list-container p {
   font-size: 18px;
   color: #333;
   color: white;
-}
+} */
 
 .chat-list {
   list-style: none;
@@ -79,24 +87,27 @@
 }
 
 .conversation-header {
-  background: #4a90e2;
+  background: #fff;
   padding: 10px;
   display: flex;
   align-items: center;
+  color: #f67311;
+  border-bottom: 1px solid #f67311;
 }
 
 .back-button {
   background: transparent;
   border: none;
-  color: #fff;
+  color: #f67311;
   font-size: 24px;
   margin-right: 10px;
   cursor: pointer;
+  z-index: 99;
 }
 
 .conversation-title {
   font-size: 18px;
-  color: #fff;
+  color: #f67311;
   margin: 0;
 }
 
@@ -133,6 +144,8 @@
   padding: 10px;
   border-radius: 8px;
   display: inline-block;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .chat-message.sent .message-text {
@@ -162,7 +175,7 @@
 }
 
 .send-button {
-  background: #4a90e2;
+  background: #f67311;
   color: #fff;
   border: none;
   padding: 0 15px;
